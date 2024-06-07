@@ -1,0 +1,35 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+fastapi = "*"
+alembic = "*"
+sqlalchemy = "*"
+asyncpg = "*"
+uvicorn = "*"
+faker = "*"
+python-jose = {extras = ["cryptography"], version = "*"}
+pydantic = {extras = ["email"], version = "*"}
+passlib = "*"
+bcrypt = "*"
+pydantic-settings = "*"
+python-multipart = "*"
+libgravatar = "*"
+fastapi-mail = "*"
+python-dotenv = "*"
+redis = "*"
+fastapi-limiter = "*"
+cloudinary = "*"
+sphinx = "*"
+pytest = "*"
+pytest-asyncio = "*"
+aiosqlite = "*"
+
+[dev-packages]
+sphinx = "*"
+aiosqlite = "*"
+
+[requires]
+python_version = "3.12"

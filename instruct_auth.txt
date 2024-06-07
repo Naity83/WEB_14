@@ -1,0 +1,4 @@
+pipenv install python-jose[cryptography]
+
+2. В моделях додамо клас користувачів
+

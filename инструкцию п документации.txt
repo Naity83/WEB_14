@@ -1,0 +1,203 @@
+pipenv install sphinx --dev
+sphinx-quickstart docs
+cd docs
+docs/conf.py:
+import sys
+import os
+
+sys.path.append(os.path.abspath('..'))
+
+
+project = 'contacts project'
+copyright = '2024, Nataliya Khomenko'
+author = 'Nataliya Khomenko'
+
+# -- General configuration ---------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
+
+extensions = ['sphinx.ext.autodoc']
+
+templates_path = ['_templates']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+
+
+# -- Options for HTML output -------------------------------------------------
+# https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+html_theme = 'nature'
+html_static_path = ['_static']
+
+
+docs/index.rst:
+.. hw14 documentation master file, created by
+   sphinx-quickstart on Sun Jun  2 18:42:44 2024.
+   You can adapt this file completely to your liking, but it should at least
+   contain the root `toctree` directive.
+
+Welcome to hw14's documentation!
+================================
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Contents:
+
+
+REST API main
+===================
+.. automodule:: main
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+
+REST API repository Contacts
+============================
+.. automodule:: src.repository.contacts
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+
+REST API repository Users
+=========================
+.. automodule:: src.repository.users
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+
+REST API routes Contacts
+========================
+.. automodule:: src.routes.contacts
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+
+REST API routes Users
+=========================
+.. automodule:: src.routes.users
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+
+REST API routes Auth
+=========================
+.. automodule:: src.routes.auth
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+
+REST API service Auth
+=========================
+.. automodule:: src.services.auth
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+
+REST API service Email
+=========================
+.. automodule:: src.services.email
+  :members:
+  :undoc-members:
+  :show-inheritance:
+
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`
+
+
+Допоможе створити докумнтацію Trelent Alt+D
+
+ .\make.bat html
+
+
+Фреймворк pytest
+pipenv install pytest
+
+
+python -m unittest tests/test_unit_repository_contacts.py
+python -m unittest tests/test_unit_repository_users.py
+
+
+Щоб тестувати через pytest в папке src, tests створимо порожні __init__.py
+запускается pytest tests
+
+
+Делаем тесты для Базы даных:
+создадим conftest.py для налаштування тестів
+pipenv install aiosqlite --dev
+import asyncio
+
+import pytest
+import pytest_asyncio
+from fastapi.testclient import TestClient
+from sqlalchemy.pool import StaticPool
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
+from main import app
+from src.database.models import Base, User
+from src.database.db import get_db
+from src.services.auth import auth_service
+
+SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+
+engine = create_async_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}, poolclass=StaticPool
+)
+
+TestingSessionLocal = async_sessionmaker(autocommit=False, autoflush=False, expire_on_commit=False, bind=engine)
+
+test_user = {"username": "deadpool", "email": "deadpool@example.com", "password": "12345678"}
+
+
+@pytest.fixture(scope="module", autouse=True)
+def init_models_wrap():
+    async def init_models():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+            await conn.run_sync(Base.metadata.create_all)
+        async with TestingSessionLocal() as session:
+            hash_password = auth_service.get_password_hash(test_user["password"])
+            current_user = User(username=test_user["username"], email=test_user["email"], password=hash_password,
+                                confirmed=True)
+            session.add(current_user)
+            await session.commit()
+
+    asyncio.run(init_models())
+
+
+@pytest.fixture(scope="module")
+def client():    
+    async def override_get_db():
+        session = TestingSessionLocal()
+        try:
+            yield session
+        except ArithmeticError as err:
+            print(err)
+            await session.rollback()
+        finally:
+            await session.close()
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    yield TestClient(app)
+
+
+@pytest_asyncio.fixture()
+async def get_token():
+    token = await auth_service.create_access_token(data={"sub": test_user["email"]})
+    return token
+
+
+test_e2e_auth.py:
+
+
